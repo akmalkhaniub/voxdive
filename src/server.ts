@@ -247,25 +247,39 @@ wss.on('connection', (clientWs: WebSocket) => {
             sendToClient('INTERRUPTED', { haltMs, summary: bargeInMs.summary() });
           }
         });
-        voiceAgentClient.on('user_transcript_delta', (ev: any) => sendToClient('USER_TRANSCRIPT_DELTA', { text: ev.text }));
+        voiceAgentClient.on('user_transcript_delta', (ev: any) => {
+          const text = ev.text || ev.delta || '';
+          if (text) sendToClient('USER_TRANSCRIPT_DELTA', { text });
+        });
         voiceAgentClient.on('user_transcript_final', (ev: any) => {
-          sendToClient('USER_TRANSCRIPT_FINAL', { text: ev.text });
-          turnClock?.markUserStop(); // start the turnaround stopwatch
+          const text = ev.text || ev.transcript || '';
+          if (text && text !== 'undefined') {
+            sendToClient('USER_TRANSCRIPT_FINAL', { text });
+            turnClock?.markUserStop(); // start the turnaround stopwatch
+          }
         });
         voiceAgentClient.on('agent_reply_started', () => {
           sendToClient('AGENT_REPLY_STARTED');
           turnClock?.markReplyStart();
         });
         voiceAgentClient.on('agent_reply_audio', (ev: any) => {
-          const turnaround = turnClock?.markFirstAudio();
-          if (turnaround != null) {
-            turnaroundMs.add(turnaround);
-            log.info('turnaround', { ms: turnaround, p95: turnaroundMs.summary().p95 });
-            sendToClient('LATENCY', { turnaroundMs: turnaround, summary: turnaroundMs.summary() });
+          const audio = ev.data || ev.audio;
+          if (audio) {
+            const turnaround = turnClock?.markFirstAudio();
+            if (turnaround != null) {
+              turnaroundMs.add(turnaround);
+              log.info('turnaround', { ms: turnaround, p95: turnaroundMs.summary().p95 });
+              sendToClient('LATENCY', { turnaroundMs: turnaround, summary: turnaroundMs.summary() });
+            }
+            sendToClient('AGENT_REPLY_AUDIO', { audio, format: ev.format || 'pcm16_24khz' });
           }
-          sendToClient('AGENT_REPLY_AUDIO', { audio: ev.data, format: ev.format });
         });
-        voiceAgentClient.on('agent_transcript', (ev: any) => sendToClient('AGENT_TRANSCRIPT', { text: ev.text }));
+        voiceAgentClient.on('agent_transcript', (ev: any) => {
+          const text = ev.text || ev.transcript || '';
+          if (text && text !== 'undefined') {
+            sendToClient('AGENT_TRANSCRIPT', { text });
+          }
+        });
         voiceAgentClient.on('agent_reply_done', (ev: any) => {
           turnClock?.markReplyDone();
           sendToClient('AGENT_REPLY_DONE', { status: ev.status, interrupted: ev.interrupted });

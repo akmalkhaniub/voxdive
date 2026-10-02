@@ -110,11 +110,21 @@ class VoxDiveApp {
       case 'BRIEFING_READY': this.setBusy(false); this.onBriefingReady(msg); break;
       case 'VOICE_AGENT_READY': this.appendSystem(`🎙️ Voice agent online. ${msg.message || ''}`); break;
       case 'USER_SPEECH_STARTED': this.stopAudioPlayback(); this.showPartial('Listening…'); break;
-      case 'USER_TRANSCRIPT_DELTA': this.showPartial(msg.text); break;
-      case 'USER_TRANSCRIPT_FINAL': this.hidePartial(); this.appendChat(msg.text, 'You'); break;
+      case 'USER_TRANSCRIPT_DELTA': if (msg.text) this.showPartial(msg.text); break;
+      case 'USER_TRANSCRIPT_FINAL': {
+        this.hidePartial();
+        const t = msg.text || msg.transcript;
+        if (t && t !== 'undefined') this.appendChat(t, 'You');
+        break;
+      }
       case 'AGENT_REPLY_STARTED': this.showPartial('VoxDive is answering…'); break;
       case 'AGENT_REPLY_AUDIO': if (msg.audio) this.playPcmChunk(msg.audio, 24000); break;
-      case 'AGENT_TRANSCRIPT': this.hidePartial(); this.appendChat(msg.text, 'VoxDive'); break;
+      case 'AGENT_TRANSCRIPT': {
+        this.hidePartial();
+        const t = msg.text || msg.transcript;
+        if (t && t !== 'undefined') this.appendChat(t, 'VoxDive');
+        break;
+      }
       case 'AGENT_REPLY_DONE': this.hidePartial(); if (msg.interrupted) this.stopAudioPlayback(); break;
       case 'TOOL_EXECUTED': this.appendSystem(`🛠️ ${msg.name}(${msg.args?.query || msg.args?.topic || ''})`); break;
       case 'COPILOT_ANSWER': this.appendChat(msg.answer, 'VoxDive', msg.citations || [], msg.engine); break;
@@ -297,6 +307,7 @@ class VoxDiveApp {
     this.chatContainer.appendChild(el); this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
   }
   appendChat(text, who, citations, engine) {
+    if (!text || text === 'undefined' || typeof text !== 'string') return;
     const isYou = who === 'You', isAgent = who === 'VoxDive';
     const bubble = document.createElement('div');
     bubble.className = `px-4 py-2.5 rounded-2xl border ${isYou ? 'bg-indigo-50/70 border-indigo-100' : isAgent ? 'bg-violet-50/70 border-violet-100' : 'bg-white border-line'}`;

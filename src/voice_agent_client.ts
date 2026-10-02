@@ -256,15 +256,19 @@ export class AssemblyAIVoiceAgentClient extends EventEmitter {
     } else if (event.type === 'input.speech.started') {
       this.emit('user_speech_started');
     } else if (event.type === 'transcript.user.delta') {
-      this.emit('user_transcript_delta', { text: event.delta });
+      const text = event.delta || event.text || '';
+      if (text) this.emit('user_transcript_delta', { text });
     } else if (event.type === 'transcript.user') {
-      this.emit('user_transcript_final', { text: event.transcript });
+      const text = event.transcript || event.text || event.delta || '';
+      if (text) this.emit('user_transcript_final', { text });
     } else if (event.type === 'reply.started') {
       this.emit('agent_reply_started');
     } else if (event.type === 'reply.audio') {
-      this.emit('agent_reply_audio', { data: event.data, format: 'pcm16_24khz' });
+      const data = event.data || event.audio || '';
+      if (data) this.emit('agent_reply_audio', { data, format: 'pcm16_24khz' });
     } else if (event.type === 'transcript.agent') {
-      this.emit('agent_transcript', { text: event.transcript });
+      const text = event.transcript || event.text || event.delta || '';
+      if (text) this.emit('agent_transcript', { text });
     } else if (event.type === 'reply.done') {
       this.emit('agent_reply_done', { status: event.status, interrupted: event.status === 'interrupted' });
     } else if (event.type === 'tool.call') {
